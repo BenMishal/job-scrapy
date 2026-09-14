@@ -6,7 +6,8 @@ An open-source MCP server for real-time job discovery across multiple job source
 
 ## Demo
 Watch the MCP server in action:
-<img width="1152" height="648" alt="download" src="https://github.com/user-attachments/assets/59c95889-17f0-4b3d-a748-3ce6770239b9" />
+<img width="1152" height="648" alt="download (1)" src="https://github.com/user-attachments/assets/3aa8f082-a196-4d95-b1a3-2e5c8015cc5a" />
+
 
 
 ## Why Job Scrapy?
