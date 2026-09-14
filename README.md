@@ -6,7 +6,8 @@ An open-source MCP server for real-time job discovery across multiple job source
 
 ## Demo
 Watch the MCP server in action:
-[![Job Scrapy Demo](https://cdn.loom.com/sessions/thumbnails/6a462b2b33c04cc4b088a7621dfd46ad-with-play.gif)](https://www.loom.com/share/6a462b2b33c04cc4b088a7621dfd46ad)
+<img width="1152" height="648" alt="download" src="https://github.com/user-attachments/assets/59c95889-17f0-4b3d-a748-3ce6770239b9" />
+
 
 ## Why Job Scrapy?
 AI agents and LLMs are incredibly powerful, but their training data is static. If an AI is asked to "find jobs," it relies on outdated web data or hallucinates. **Job Scrapy** solves this by providing a Model Context Protocol (MCP) server that empowers AI agents to execute real-time searches across major job boards and remote APIs, ensuring accurate, up-to-the-minute job discovery.
