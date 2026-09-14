@@ -1,37 +1,62 @@
-# Job Scrapy (MCP Server)
+# Job Scrapy
 
-This is a Model Context Protocol (MCP) server that provides job scraping capabilities. It allows AI assistants like Claude, Antigravity, and ChatGPT to search for and scrape job listings across various platforms (LinkedIn, Indeed, Glassdoor, ZipRecruiter) and remote-specific job boards (Remotive, RemoteOK, Himalayas, etc.).
+An open-source MCP server for real-time job discovery across multiple job sources.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Why Job Scrapy?
+AI agents and LLMs are incredibly powerful, but their training data is static. If an AI is asked to "find jobs," it relies on outdated web data or hallucinates. **Job Scrapy** solves this by providing a Model Context Protocol (MCP) server that empowers AI agents to execute real-time searches across major job boards and remote APIs, ensuring accurate, up-to-the-minute job discovery.
 
 ## Features
+- **Unified Job Model**: Normalizes disparate job postings into a consistent, strongly-typed format.
+- **Robust Deduplication**: Intelligently removes duplicate listings using composite keys and URLs.
+- **Concurrent Scraping**: Orchestrates searches across multiple sources simultaneously for speed.
+- **MCP Native**: Exposes clean, descriptive tools that Claude, Antigravity, and other agents can consume natively via `stdio`.
 
-- **JobSpy Integration**: Scrape standard job boards for a specific search term and location.
-- **Remote APIs Integration**: Search across 10+ remote job boards.
-- **MCP Standard**: Built with `mcp` (FastMCP), meaning it integrates natively with any MCP client using `stdio`.
+## Architecture
 
-## Prerequisites
+```mermaid
+graph TD
+    A[AI Agent / LLM] -->|MCP Protocol| B(Job Scrapy Server)
+    B --> C{Orchestrator & Deduplicator}
+    C --> D[JobSpy Source]
+    C --> E[Remote APIs Source]
+    
+    D -->|Scrapes| F(LinkedIn, Indeed, Glassdoor)
+    E -->|Queries| G(Remotive, Arbeitnow, Himalayas)
+    
+    F --> H[Normalized Job Model]
+    G --> H
+    H --> B
+```
 
-- Python 3.10+
-- (Optional) API keys for sources like Findwork, Jooble, Adzuna, etc., in a `.env` file.
+## Supported Sources
+
+**Implemented:**
+- JobSpy (LinkedIn, Indeed, Glassdoor, ZipRecruiter)
+- Remote APIs (Remotive, Arbeitnow, Himalayas)
 
 ## Installation
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/job-scrapy.git
-   cd job-scrapy
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Set up environment variables (if you have API keys for remote boards):
-   - Copy `.env.example` to `.env` (if applicable) and fill in your keys.
+```bash
+git clone https://github.com/BenMishal/job-scrapy.git
+cd job-scrapy
+pip install -r requirements.txt
+```
 
-## Connecting to AI Assistants
+*(Note: Docker is supported via the included `Dockerfile` but is not mandatory for normal usage).*
 
-### 1. Claude Desktop
-Edit your `claude_desktop_config.json` file (usually located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+## Environment Variables
+Copy the `.env.example` file to `.env`:
+```bash
+cp .env.example .env
+```
+Add your optional API keys for sources like Findwork or Adzuna. **Never commit your `.env` file to version control.**
 
+## Connecting to AI Agents
+
+### Claude Desktop
+Add this to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -42,11 +67,9 @@ Edit your `claude_desktop_config.json` file (usually located at `~/Library/Appli
   }
 }
 ```
-Restart Claude Desktop, and you can now ask Claude to "Find me business analyst jobs in Dubai".
 
-### 2. Antigravity IDE
-Antigravity supports MCP natively. You can add the server to your `mcp_config.json` inside your Antigravity customizations directory (e.g., `~/.gemini/config/mcp_config.json`):
-
+### Antigravity
+Add this to your Antigravity `mcp_config.json`:
 ```json
 {
   "mcpServers": {
@@ -58,14 +81,29 @@ Antigravity supports MCP natively. You can add the server to your `mcp_config.js
 }
 ```
 
-### 3. ChatGPT
-ChatGPT does not natively support the MCP protocol yet. However, you can wrap this MCP server with a fast API using tools like `mcp-proxy` or build a custom GPT Action. Alternatively, you can use frameworks that bridge MCP to OpenAI's function calling.
+## MCP Usage / Example Prompts
+Once connected, try asking your AI:
+- *"Find Business Analyst jobs in Dubai posted in the last 24 hours"*
+- *"Find remote Python jobs posted in the last 24 hours"*
+- *"Find Data Analyst jobs in Chennai"*
 
-## Development
-
-You can test the MCP tools locally using the MCP Inspector:
+## Development & Testing
+This project uses `pytest` for testing, `ruff` for linting, and `mypy` for type checking.
 
 ```bash
-mcp dev server.py
+pip install -e ".[dev]"
+pytest tests/
+ruff check .
+mypy src/job_scrapy
 ```
-This will open a web interface where you can test the `search_jobspy` and `search_remote_apis` tools.
+
+**Testing the Server Manually:**
+```bash
+npx @modelcontextprotocol/inspector mcp dev server.py
+```
+
+## Responsible Use
+This project is an automation tool. Users are responsible for complying with the Terms of Service, robots.txt policies, and applicable laws of the job platforms they access. We do not implement CAPTCHA bypassing or anti-bot evasion techniques designed to defeat access controls.
+
+## License
+MIT License. See `LICENSE` for details.

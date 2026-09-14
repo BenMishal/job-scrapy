@@ -1,76 +1,87 @@
-from mcp.server.fastmcp import FastMCP
-from typing import List, Optional
-import pandas as pd
-import json
+import logging
 
-from sources.jobspy_source import collect_jobspy_jobs
-from sources.remote_api_source import collect_remote_api_jobs
+from mcp.server.fastmcp import FastMCP
+
+# Configure logging before importing local modules
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+from src.job_scrapy.services.search import search_all_jobs
 
 # Create a FastMCP server
 mcp = FastMCP("Job Scraper")
 
-def format_jobs(df: pd.DataFrame) -> str:
-    """Format the dataframe of jobs into a markdown string."""
-    if df.empty:
-        return "No jobs found for this query."
-        
-    result = []
-    # Limit to top 20 to avoid exceeding context windows
-    for index, row in df.head(20).iterrows():
-        title = row.get("job_title", "Unknown Title")
-        company = row.get("company", "Unknown Company")
-        location = row.get("location", "Unknown Location")
-        site = row.get("site", row.get("source_query", "Unknown Source"))
-        url = row.get("job_url", "")
-        
-        job_md = f"### {title} at {company}\n"
-        job_md += f"- **Location**: {location}\n"
-        job_md += f"- **Source**: {site}\n"
-        if url:
-            job_md += f"- **URL**: {url}\n"
-            
-        result.append(job_md)
-        
-    if len(df) > 20:
-        result.append(f"\n*...and {len(df) - 20} more jobs not shown to save space.*")
-        
-    return "\n".join(result)
-
 @mcp.tool()
-def search_jobspy(search_terms: List[str], locations: List[str], country: Optional[str] = None) -> str:
+def search_jobs(
+    query: str, 
+    location: str = "Remote", 
+    country: str | None = None,
+    hours_old: int = 168,
+    remote: bool = False,
+    results_limit: int = 20,
+    sources: list[str] | None = None
+) -> str:
     """
-    Scrape job boards (LinkedIn, Indeed, Glassdoor, ZipRecruiter) for specific roles.
+    Search for jobs across multiple job sources including LinkedIn, Indeed, Glassdoor, and remote API boards.
     
     Args:
-        search_terms: List of job titles to search for (e.g., ["business analyst", "data analyst"])
-        locations: List of locations to search in (e.g., ["Dubai", "London"])
-        country: Optional country parameter for Indeed localization (e.g., "India", "UAE")
+        query: Job title or keywords (e.g., "Business Analyst", "Python Developer").
+        location: City, State, or "Remote". Defaults to "Remote".
+        country: Optional country parameter for accurate localization (e.g., "UAE", "India").
+        hours_old: Filter jobs posted in the last X hours (default 168 = 7 days).
+        remote: If true, filters for strictly remote jobs.
+        results_limit: Maximum number of jobs to return.
+        sources: Optional list of sources to restrict search (e.g., ["jobspy", "remote_api"]).
     """
     try:
-        def log_callback(msg):
-            pass # Suppress logs so they don't break stdout communication
+        jobs = search_all_jobs(
+            query=query,
+            location=location,
+            country=country,
+            hours_old=hours_old,
+            remote=remote,
+            results_limit=results_limit,
+            sources_to_use=sources
+        )
+        
+        if not jobs:
+            return f"No jobs found for '{query}' in '{location}'."
             
-        df = collect_jobspy_jobs(search_terms, locations, country, log_callback=log_callback)
-        return format_jobs(df)
+        result = []
+        for job in jobs:
+            # Format nicely for markdown
+            # Format nicely for markdown
+            md = f"### {job.title} at {job.company}\n"
+            md += f"- **Location**: {job.location}\n"
+            md += f"- **Source**: {job.source}\n"
+            if job.url:
+                md += f"- **URL**: {job.url}\n"
+            result.append(md)
+            
+        return "\n".join(result)
     except Exception as e:
-        return f"Error scraping JobSpy: {str(e)}"
+        logger.error(f"Search failed: {e}")
+        return f"An error occurred during search: {e!s}"
 
 @mcp.tool()
-def search_remote_apis(search_terms: List[str]) -> str:
+def search_remote_jobs(query: str, results_limit: int = 20) -> str:
     """
-    Scrape remote-focused job boards (Remotive, RemoteOK, Himalayas, etc.) for specific roles.
+    Specifically search for strictly remote jobs across all available remote APIs.
     
     Args:
-        search_terms: List of keywords/job titles to search for (e.g., ["data analyst"])
+        query: Job title or keywords (e.g., "Data Analyst").
+        results_limit: Maximum number of jobs to return.
     """
-    try:
-        def log_callback(msg):
-            pass # Suppress logs
-            
-        df = collect_remote_api_jobs(search_terms, log_callback=log_callback)
-        return format_jobs(df)
-    except Exception as e:
-        return f"Error scraping Remote APIs: {str(e)}"
+    return search_jobs(query=query, location="Remote", remote=True, results_limit=results_limit, sources=["remote_api"])
+
+@mcp.tool()
+def list_available_sources() -> str:
+    """List the job boards currently supported by Job Scrapy."""
+    sources = [
+        "- **JobSpy**: Scrapes LinkedIn, Indeed, Glassdoor, and ZipRecruiter.",
+        "- **Remote APIs**: Scrapes Remotive, Arbeitnow, Himalayas, and RemoteOK."
+    ]
+    return "\n".join(sources)
 
 if __name__ == "__main__":
     # Run the server using stdio transport (compatible with Claude, Antigravity, etc.)

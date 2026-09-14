@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  job-scrapy:
+    build: .
+    image: job-scrapy:latest
+    env_file:
+      - .env
+    # Note: MCP usually communicates via stdio. Running this in docker-compose 
+    # is mostly for testing or if you use SSE (which fastmcp supports optionally).
+    # For stdio, the host MCP client executes `docker run -i job-scrapy`.
